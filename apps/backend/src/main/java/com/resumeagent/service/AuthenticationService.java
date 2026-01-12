@@ -1,15 +1,22 @@
 package com.resumeagent.service;
 
 import com.resumeagent.dto.request.LoginRequest;
+import com.resumeagent.dto.response.CommonResponse;
 import com.resumeagent.dto.response.LoginResponse;
 import com.resumeagent.dto.response.UserInfoResponse;
+import com.resumeagent.entity.EmailVerificationToken;
 import com.resumeagent.entity.User;
+import com.resumeagent.entity.enums.UserRole;
+import com.resumeagent.exception.ValueNotFoundException;
+import com.resumeagent.repository.EmailVerificationTokenRepository;
 import com.resumeagent.repository.UserRepository;
 import com.resumeagent.security.CookieUtil;
 import com.resumeagent.security.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ValidationException;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -19,6 +26,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 /**
  * Authentication Service
@@ -42,6 +51,7 @@ public class AuthenticationService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final CookieUtil cookieUtil;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     /**
      * Authenticate user and issue tokens
@@ -192,6 +202,57 @@ public class AuthenticationService {
                 .plan(user.getPlan().name())
                 .resumeGenerationLimit(user.getResumeGenerationLimit())
                 .resumeGenerationUsed(user.getResumeGenerationUsed())
+                .build();
+    }
+
+    /**
+     * Verifies an email verification token and activates the user's email.
+     * This method performs all checks required to safely verify an email:
+     * - Token existence
+     * - Token expiration
+     * - Token reuse prevention
+     * Transactional because:
+     * - User email status update
+     * - Token usage update
+     * must succeed or fail together.
+     *
+     * @param token email verification token
+     * @return success response with verified email
+     */
+    @Transactional
+    public CommonResponse verifyToken(@NotBlank String token) {
+
+        // Fetch verification token from database
+        // If token does not exist, treat it as invalid
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ValueNotFoundException("Token not found"));
+
+        // Check if token has expired
+        // Prevents usage of old or leaked tokens
+        if (verificationToken.getExpiresAt().isBefore(Instant.now())) {
+            throw new ValidationException("Token is expired");
+        }
+
+        // Check if token has already been used
+        // Prevents token replay attacks
+        if (verificationToken.isUsed()){
+            throw new ValidationException("Token is used");
+        }
+
+        // Activate user's email
+        User user = verificationToken.getUser();
+        user.setEmailActive(true);
+        userRepository.save(user);
+
+        // Mark token as used after successful verification
+        verificationToken.setUsed(true);
+        verificationToken.setUsedAt(Instant.now());
+        emailVerificationTokenRepository.save(verificationToken);
+
+        // Return success response
+        return CommonResponse.builder()
+                .message("Email Verified")
+                .email(user.getEmail())
                 .build();
     }
 }
