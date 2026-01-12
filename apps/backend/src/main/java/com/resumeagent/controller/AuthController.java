@@ -1,14 +1,17 @@
 package com.resumeagent.controller;
 
 import com.resumeagent.dto.request.LoginRequest;
+import com.resumeagent.dto.response.CommonResponse;
 import com.resumeagent.dto.response.LoginResponse;
 import com.resumeagent.dto.response.UserInfoResponse;
 import com.resumeagent.service.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
  * - HTTPS required in production
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(value = "/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -54,7 +57,7 @@ public class AuthController {
      * @param httpResponse HTTP response for setting cookies
      * @return Login response
      */
-    @PostMapping("/login")
+    @PostMapping(value = "/login")
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest,
@@ -80,7 +83,7 @@ public class AuthController {
      * @param response HTTP response
      * @return Success message
      */
-    @PostMapping("/logout")
+    @PostMapping(value = "/logout")
     public ResponseEntity<String> logout(
             HttpServletRequest request,
             HttpServletResponse response) {
@@ -104,9 +107,30 @@ public class AuthController {
      * @param authentication Spring Security Authentication object (injected)
      * @return User information
      */
-    @GetMapping("/me")
+    @GetMapping(value = "/me")
     public ResponseEntity<UserInfoResponse> getCurrentUser(Authentication authentication) {
         UserInfoResponse userInfo = authenticationService.getCurrentUser(authentication);
         return ResponseEntity.ok(userInfo);
+    }
+
+    /**
+     * Email verification endpoint.
+     * This endpoint is called when a user clicks the verification link
+     * sent to their email address.
+     * Flow:
+     * - Accepts a verification token as a request parameter
+     * - Delegates validation and verification logic to the service layer
+     * HTTP behavior:
+     * - 200 OK when email is verified successfully
+     * - 400 BAD REQUEST for invalid or expired tokens
+     * - 404 NOT FOUND if token does not exist
+     * SECURITY NOTES:
+     * - Token is passed as a request parameter (safe for one-time verification)
+     * - No authentication required (public endpoint)
+     * - Token validity and usage checks are enforced server-side
+     */
+    @GetMapping(value = "/verify-email")
+    public CommonResponse verifyEmail(@NotBlank @RequestParam("token") String token) {
+        return authenticationService.verifyToken(token);
     }
 }
