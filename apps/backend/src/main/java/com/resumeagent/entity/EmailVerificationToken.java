@@ -24,7 +24,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 @ToString(exclude = "token")
-public class EmailVerificationTokens implements Serializable {
+public class EmailVerificationToken implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

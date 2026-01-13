@@ -409,6 +409,100 @@ CREATE INDEX idx_password_history_created_at ON password_history(created_at DESC
 COMMENT ON TABLE password_history IS 'Password history to prevent password reuse for enhanced security';
 
 -- ============================================================================
+-- REFRESH TOKENS (Session Continuity & Token Rotation)
+-- ============================================================================
+
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- Store ONLY hashed refresh token (never plaintext)
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    -- Token lifecycle
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    revoked_at TIMESTAMP,
+    -- Rotation & security
+    replaced_by_token_id UUID REFERENCES refresh_tokens(id),
+    -- Session context (very important for security)
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP
+);
+
+-- Indexes for refresh_tokens
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
+CREATE INDEX idx_refresh_tokens_revoked ON refresh_tokens(revoked);
+CREATE INDEX idx_refresh_tokens_created_at ON refresh_tokens(created_at DESC);
+
+COMMENT ON TABLE refresh_tokens IS 'Hashed refresh tokens for session continuity, rotation, and revocation';
+COMMENT ON COLUMN refresh_tokens.token_hash IS 'Hashed refresh token (bcrypt/argon2). Never store plaintext tokens.';
+COMMENT ON COLUMN refresh_tokens.replaced_by_token_id IS 'Used for refresh token rotation and reuse detection';
+
+-- ============================================================================
+-- SYSTEM & API LOGS (Centralized Observability & Audit)
+-- ============================================================================
+
+CREATE TABLE system_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    -- Log classification
+    log_level VARCHAR(10) NOT NULL CHECK (log_level IN ('TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'SECURITY')),
+    log_type VARCHAR(50) NOT NULL,
+    -- Examples:
+    -- API_REQUEST, API_RESPONSE, AUTH_FAILURE, ADMIN_ACTION,
+    -- SYSTEM_EVENT, EXCEPTION, RATE_LIMIT
+
+    -- Request context
+    http_method VARCHAR(10),
+    endpoint TEXT,
+    status_code INT,
+
+    -- Actor context
+    user_id UUID,
+    user_role VARCHAR(10),
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+
+    -- Correlation
+    request_id UUID,
+    trace_id UUID,
+
+    -- Message & payload
+    message TEXT NOT NULL,
+    metadata JSONB,
+
+    -- Error details (if any)
+    error_code VARCHAR(50),
+    stack_trace TEXT,
+
+    -- Timing
+    execution_time_ms INT,
+
+    -- Lifecycle
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- INDEXES (Critical for performance)
+-- ============================================================================
+
+CREATE INDEX idx_system_logs_created_at ON system_logs(created_at DESC);
+CREATE INDEX idx_system_logs_log_level ON system_logs(log_level);
+CREATE INDEX idx_system_logs_log_type ON system_logs(log_type);
+CREATE INDEX idx_system_logs_user_id ON system_logs(user_id);
+CREATE INDEX idx_system_logs_status_code ON system_logs(status_code);
+CREATE INDEX idx_system_logs_endpoint ON system_logs(endpoint);
+CREATE INDEX idx_system_logs_request_id ON system_logs(request_id);
+CREATE INDEX idx_system_logs_metadata ON system_logs USING GIN (metadata);
+
+COMMENT ON TABLE system_logs IS 'Centralized system, API, and security logs for auditing and observability';
+COMMENT ON COLUMN system_logs.log_type IS 'High-level classification of log event';
+COMMENT ON COLUMN system_logs.metadata IS 'Flexible JSON payload for additional structured data';
+COMMENT ON COLUMN system_logs.request_id IS 'Correlates logs belonging to same HTTP request';
+COMMENT ON COLUMN system_logs.trace_id IS 'Used for distributed tracing or async jobs';
+
+-- ============================================================================
 -- TRIGGERS FOR AUTOMATIC TIMESTAMP UPDATES
 -- ============================================================================
 
