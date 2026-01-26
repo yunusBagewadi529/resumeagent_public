@@ -42,9 +42,6 @@ COMMENT ON COLUMN users.resume_generation_used IS 'Number of resume generations 
 -- ============================================================================
 -- MASTER RESUMES (Canonical User-Owned Source Resume)
 -- ============================================================================
--- One master resume per user (today).
--- Future: allow multiple master resumes by dropping UNIQUE constraint.
--- ============================================================================
 
 CREATE TABLE master_resumes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
