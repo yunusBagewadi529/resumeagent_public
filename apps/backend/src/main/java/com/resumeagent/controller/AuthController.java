@@ -2,11 +2,15 @@ package com.resumeagent.controller;
 
 import com.resumeagent.dto.request.LoginRequest;
 import com.resumeagent.dto.request.RegisterAdminAndUserRequest; // [ADDED]
+import com.resumeagent.dto.request.ForgotPasswordRequest;
+import com.resumeagent.dto.request.ResetPasswordRequest;
 import com.resumeagent.dto.response.CommonResponse;
 import com.resumeagent.dto.response.LoginResponse;
 import com.resumeagent.dto.response.UserInfoResponse;
 import com.resumeagent.service.AuthenticationService;
+import com.resumeagent.service.PasswordResetService;
 import com.resumeagent.service.UserService; // [ADDED]
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -18,12 +22,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 /**
  * Authentication Controller
  * Provides authentication endpoints:
  * - POST /auth/login - User login
  * - POST /auth/logout - User logout
  * - GET /auth/me - Get current user info
+ * - POST /auth/forgot-password - Request password reset
+ * - POST /auth/reset-password - Reset password using token
  * SECURITY NOTES:
  * - All tokens sent via HttpOnly Secure cookies
  * - No tokens in response bodies
@@ -40,6 +48,9 @@ public class AuthController {
 
     // [ADDED] Service responsible for USER registration
     private final UserService userService;
+
+    // [ADDED] Service handling password reset lifecycle
+    private final PasswordResetService passwordResetService;
 
     /**
      * Login endpoint
@@ -168,5 +179,47 @@ public class AuthController {
     @GetMapping(value = "/verify-email")
     public CommonResponse verifyEmail(@NotBlank @RequestParam("token") String token) {
         return authenticationService.verifyToken(token);
+    }
+
+    /**
+     * Request a password reset link (public endpoint).
+     * Behavior: Always returns 200 with a generic message to prevent enumeration.
+     *
+     * Request Body: { "email": "user@example.com" }
+     */
+    @PostMapping(value = "/forgot-password")
+    public ResponseEntity<CommonResponse> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest) {
+
+        try {
+            passwordResetService.createAndSendPasswordResetToken(request.getEmail(), httpRequest);
+        } catch (IOException | MessagingException e) {
+            // Log details server-side but return generic message to client
+            log.error("Failed to send password reset email for {}: {}", request.getEmail(), e.getMessage());
+        }
+
+        CommonResponse resp = CommonResponse.builder()
+                .message("If this email is registered, a password reset link has been sent.")
+                .build();
+
+        return ResponseEntity.ok(resp);
+    }
+
+    /**
+     * Perform password reset using token.
+     *
+     * Request Body: { "token": "...", "newPassword": "NewPass123!" }
+     */
+    @PostMapping(value = "/reset-password")
+    public ResponseEntity<CommonResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+
+        CommonResponse resp = CommonResponse.builder()
+                .message("Password has been reset successfully.")
+                .build();
+
+        return ResponseEntity.ok(resp);
     }
 }

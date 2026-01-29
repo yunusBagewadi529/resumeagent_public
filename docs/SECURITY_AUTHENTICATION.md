@@ -399,4 +399,8 @@ X-XSS-Protection: 1; mode=block
 
 **Document Version:** 1.0  
 **Last Updated:** 2026-01-08  
+<<<<<<< Updated upstream
 **Maintained By:** Security Engineering Team
+=======
+**Maintained By:** Mohammad Umar Shaikh & Yunus Bagewadi
+>>>>>>> Stashed changes

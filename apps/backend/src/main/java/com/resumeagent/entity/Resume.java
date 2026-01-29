@@ -1,13 +1,12 @@
 package com.resumeagent.entity;
 
+import com.resumeagent.entity.enums.ResumeStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -15,17 +14,18 @@ import java.util.UUID;
         name = "resumes",
         indexes = {
                 @Index(name = "idx_resumes_user_id", columnList = "user_id"),
-                @Index(name = "idx_resumes_created_at", columnList = "created_at"),
-                @Index(name = "idx_resumes_job_title", columnList = "job_title_targeted")
+                @Index(name = "idx_resumes_master_resume_id", columnList = "master_resume_id"),
+                @Index(name = "idx_resumes_status", columnList = "status"),
+                @Index(name = "idx_resumes_created_at", columnList = "created_at")
         }
 )
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @EqualsAndHashCode(of = "id")
-@ToString(exclude = {"user", "versions"})
+@ToString(exclude = {"user", "masterResume"})
 public class Resume implements Serializable {
 
     @Serial
@@ -34,51 +34,79 @@ public class Resume implements Serializable {
     // -------------------------------------------------------------------------
     // Primary Key
     // -------------------------------------------------------------------------
+
     @Id
     @GeneratedValue
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
     // -------------------------------------------------------------------------
-    // Owner (User)
+    // Ownership
     // -------------------------------------------------------------------------
+
+    /**
+     * Owner of this generated/targeted resume.
+     * If user is deleted, resumes are deleted via DB cascade.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "user_id",
             nullable = false,
-            foreignKey = @ForeignKey(name = "fk_resumes_user")
+            foreignKey = @ForeignKey(name = "fk_resumes_user_id")
     )
     private User user;
 
     // -------------------------------------------------------------------------
-    // Targeting Information
+    // Master Resume Reference (Source of Truth)
     // -------------------------------------------------------------------------
+
+    /**
+     * Reference to the master resume used as source for this resume generation.
+     * ON DELETE RESTRICT prevents deleting master resume if resumes depend on it.
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "master_resume_id",
+            nullable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_resumes_master_resume_id")
+    )
+    private MasterResume masterResume;
+
+    // -------------------------------------------------------------------------
+    // Targeting Metadata
+    // -------------------------------------------------------------------------
+
+    /**
+     * Optional targeted job title (e.g., "Backend Developer").
+     */
     @Column(name = "job_title_targeted", length = 150)
     private String jobTitleTargeted;
 
+    /**
+     * Optional targeted company name (e.g., "Google", "Amazon").
+     */
     @Column(name = "company_targeted", length = 150)
     private String companyTargeted;
 
     // -------------------------------------------------------------------------
-    // Version Tracking
+    // Status
     // -------------------------------------------------------------------------
-    @Column(name = "current_version", nullable = false)
-    private int currentVersion = 1;
 
-    // -------------------------------------------------------------------------
-    // Resume Versions (history)
-    // -------------------------------------------------------------------------
-    @OneToMany(
-            mappedBy = "resume",
-            fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<ResumeVersion> versions = new ArrayList<>();
+    /**
+     * Lifecycle status of the generated resume.
+     * ACTIVE   -> currently usable
+     * ARCHIVED -> saved but not active
+     * DELETED  -> soft deleted (kept for audit/history)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private ResumeStatus status = ResumeStatus.ACTIVE;
 
     // -------------------------------------------------------------------------
     // Auditing
     // -------------------------------------------------------------------------
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -86,36 +114,14 @@ public class Resume implements Serializable {
     private Instant updatedAt;
 
     // -------------------------------------------------------------------------
-    // Domain Invariant (Validation only)
+    // Lifecycle Hooks
     // -------------------------------------------------------------------------
-    /**
-     * Validates that a given version number does not already exist
-     * for this resume. Object creation and persistence must be handled
-     * by the service layer.
-     */
-    public void validateVersionUniqueness(int versionNumber) {
-        boolean exists = this.versions.stream()
-                .anyMatch(v -> v.getVersionNumber() == versionNumber);
 
-        if (exists) {
-            throw new IllegalStateException(
-                    "Version " + versionNumber + " already exists for resume " + this.id
-            );
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Lifecycle Callbacks
-    // -------------------------------------------------------------------------
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
-
-        if (this.currentVersion <= 0) {
-            this.currentVersion = 1;
-        }
     }
 
     @PreUpdate

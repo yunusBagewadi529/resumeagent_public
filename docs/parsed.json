@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "version": "1.0"
+  },
+  "header": {
+    "fullName": "",
+    "headline": "",
+    "location": "",
+    "email": "",
+    "phone": "",
+    "links": {
+      "linkedin": "",
+      "github": "",
+      "portfolio": "",
+      "website": "",
+      "other": []
+    }
+  },
+
+  "summary": "",
+
+  "core_skills": {
+    "technical": [],
+    "professional": [],
+    "soft": [],
+    "tools": [],
+    "domain_specific": []
+  },
+
+  "experience": [
+    {
+      "role": "",
+      "organization": "",
+      "location": "",
+      "employment_type": "",
+      "start_date": "",
+      "end_date": "",
+      "context": "",
+      "responsibilities": [],
+      "achievements": [],
+      "skills_used": []
+    }
+  ],
+
+  "projects_or_work": [
+    {
+      "title": "",
+      "type": "Project | Campaign | Research | Case Study",
+      "description": "",
+      "outcomes": [],
+      "skillsUsed": [],
+      "link": ""
+    }
+  ],
+
+  "education": [
+    {
+      "degree": "",
+      "field_of_study": "",
+      "institution": "",
+      "location": "",
+      "start_year": null,
+      "end_year": null,
+      "grade_or_score": "",
+      "notes": ""
+    }
+  ],
+
+  "certifications": [
+    {
+      "name": "",
+      "issuer": "",
+      "year": null,
+      "credential_id": "",
+      "valid_until": null
+    }
+  ],
+
+  "awards_and_honors": [
+    {
+      "title": "",
+      "issuer": "",
+      "year": null,
+      "description": ""
+    }
+  ],
+
+  "publications": [
+    {
+      "title": "",
+      "platform": "",
+      "year": null,
+      "url": ""
+    }
+  ],
+
+  "volunteer_experience": [
+    {
+      "role": "",
+      "organization": "",
+      "location": "",
+      "start_date": "",
+      "end_date": "",
+      "description": ""
+    }
+  ],
+
+  "languages": [
+    {
+      "language": "",
+      "proficiency": ""
+    }
+  ],
+
+  "professional_affiliations": [],
+
+  "additional_sections": [
+    {
+      "title": "",
+      "content": ""
+    }
+  ]
+}
