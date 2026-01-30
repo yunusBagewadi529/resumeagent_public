@@ -84,6 +84,43 @@ public class EmailService {
     }
 
     /**
+     * Sends a password reset email to the user.
+     *
+     * @param recipientEmail email address of the user
+     * @param recipientName  display name of the user
+     * @param token          unique password reset token
+     * @throws IOException        if template cannot be loaded
+     * @throws MessagingException if sending fails
+     */
+    public void sendPasswordResetEmail(String recipientEmail, String recipientName, String token)
+            throws IOException, MessagingException {
+
+        // Build reset link using frontend path (match verification style)
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+        // Load reset HTML template
+        String htmlTemplate = loadTemplate("templates/email/reset_password.html");
+
+        String subject = "Reset your ResumeAgent password";
+
+        String html = htmlTemplate
+                .replace("{{recipient_name}}", recipientName)
+                .replace("{{verification_link}}", resetLink) // template uses verification_link placeholder
+                .replace("{{year}}", String.valueOf(java.time.Year.now().getValue()));
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, java.nio.charset.StandardCharsets.UTF_8.name());
+
+        helper.setFrom("ResumeAgent <yunus.bagewadi32@gmail.com>");
+        helper.setTo(recipientEmail);
+        helper.setSubject(subject);
+        helper.setText(html, true);
+
+        mailSender.send(message);
+    }
+
+
+    /**
      * Loads an email template file from the classpath.
      *
      * @param path relative path to the template file
