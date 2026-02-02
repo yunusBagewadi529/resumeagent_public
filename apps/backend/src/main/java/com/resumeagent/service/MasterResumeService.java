@@ -74,7 +74,27 @@ public class MasterResumeService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
+        UUID userId = user.getId();
+
+        // Prevent duplicate master resume creation
+        if (masterResumeRepository.existsByUserId(userId)) {
+            throw new DuplicateResourceException("Master resume already exists for this user");
+        }
+
         MasterResumeJson parsedResume = resumeParserAgent.run(resumeText);
+
+        MasterResume masterResume = MasterResume.builder()
+                .user(user)
+                .resumeJson(parsedResume)
+                .active(true)
+                .build();
+
+        try {
+            masterResumeRepository.save(masterResume);
+        } catch (DataIntegrityViolationException ex) {
+            // This handles race conditions if two requests come together
+            throw new DuplicateResourceException("Master resume already exists for this user");
+        }
 
         return CommonResponse.builder()
                 .message("Master resume created from text successfully \n \n" + parsedResume)

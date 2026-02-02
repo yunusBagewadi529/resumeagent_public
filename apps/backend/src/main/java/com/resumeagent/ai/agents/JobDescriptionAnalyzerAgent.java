@@ -3,35 +3,36 @@ package com.resumeagent.ai.agents;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resumeagent.ai.llm.LlmClient;
 import com.resumeagent.ai.util.PromptLoader;
-import com.resumeagent.entity.model.MasterResumeJson;
+import com.resumeagent.entity.model.JobDescriptionAnalyzerJson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class ResumeParserAgent {
+public class JobDescriptionAnalyzerAgent {
 
-    private final LlmClient llm;
-    private final ObjectMapper mapper;
+    private final LlmClient lllm;
+    private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
 
-    public MasterResumeJson run(String resumeText) {
-      String basePrompt = promptLoader.load("resume_parser.prompt");
+    public JobDescriptionAnalyzerJson run(String jobDescription) {
+        String basePrompt = promptLoader.load("job_description_analyzer.prompt");
 
         String finalPrompt = basePrompt.replace(
-                "{{RESUME_TEXT}}",
-                resumeText
+                "{{JOB_DESCRIPTION}}",
+                jobDescription
         );
 
-        String output = llm.generate(finalPrompt);
+        String output = lllm.generate(finalPrompt);
 
         String json = sanitizeJson(output);
 
         try {
-            return mapper.readValue(json, MasterResumeJson.class);
+            System.out.println(json);
+            return objectMapper.readValue(json, JobDescriptionAnalyzerJson.class);
         } catch (Exception e) {
             throw new RuntimeException(
-                    "ResumeParserAgent produced invalid MasterResumeJson",
+                    "JobDescriptionAnalyzerAgent produced invalid JobDescriptionAnalyzerJson",
                     e
             );
         }
