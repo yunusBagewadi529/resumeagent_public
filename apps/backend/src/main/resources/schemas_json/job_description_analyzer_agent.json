@@ -1,0 +1,73 @@
+{
+  "job_metadata": {
+    "job_id": "string",
+    "source_platform": "string",
+    "source_url": "string",
+    "posting_date": "YYYY-MM-DD",
+    "language": "string"
+  },
+
+  "job_identity": {
+    "job_title": "string",
+    "company_name": "string",
+    "role_category": "string",
+    "industry": "string",
+    "seniority_level": "string",
+    "employment_type": "string",
+    "work_type": "string"
+  },
+
+  "location": {
+    "country": "string",
+    "cities": ["string"],
+    "remote_policy": "string"
+  },
+
+  "experience": {
+    "minimum_years": "number",
+    "maximum_years": "number",
+    "experience_domains": ["string"]
+  },
+
+  "requirements": {
+    "mandatory": {
+      "skills": ["string"],
+      "tools": ["string"],
+      "technologies": ["string"],
+      "certifications": ["string"]
+    },
+    "preferred": {
+      "skills": ["string"],
+      "tools": ["string"],
+      "technologies": ["string"],
+      "certifications": ["string"]
+    },
+    "contextual": {
+      "domain_terms": ["string"],
+      "industry_terms": ["string"]
+    }
+  },
+
+  "responsibilities": {
+    "core": ["string"],
+    "secondary": ["string"]
+  },
+
+  "education": {
+    "minimum": "string",
+    "preferred": ["string"]
+  },
+
+  "signals": {
+    "seniority_indicators": ["string"],
+    "leadership_indicators": ["string"],
+    "complexity_indicators": ["string"]
+  },
+
+  "normalization": {
+    "ats_keywords": ["string"],
+    "skill_variants": {},
+    "role_aliases": ["string"],
+    "industry_aliases": ["string"]
+  }
+}
